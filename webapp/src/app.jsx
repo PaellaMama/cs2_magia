@@ -34,6 +34,8 @@ const App = () => {
   const [averageLatency, setAverageLatency] = useState(0);
   const [playerArray, setPlayerArray] = useState([]);
   const [mapData, setMapData] = useState();
+  const [mapName, setMapName] = useState();
+  const [rawMapName, setRawMapName] = useState();
   const [localTeam, setLocalTeam] = useState();
   const [bombData, setBombData] = useState();
   const [settings, setSettings] = useState(loadSettings());
@@ -105,12 +107,20 @@ const App = () => {
         setBombData(parsedData.m_bomb);
 
         const map = parsedData.m_map;
+        const mapRaw = parsedData.m_map_raw;
+
+        setMapName(map);
+        setRawMapName(mapRaw);
+
         if (map !== "invalid") {
           setMapData({
             ...(await (await fetch(`data/${map}/data.json`)).json()),
             name: map,
           });
           document.body.style.backgroundImage = `url(./data/${map}/background.png)`;
+        } else {
+          setMapData(undefined);
+          document.body.style.backgroundImage = "";
         }
       };
     };
@@ -195,7 +205,9 @@ const App = () => {
           )) || (
               <div id="radar" className={`relative overflow-hidden origin-center`}>
                 <h1 className="radar_message">
-                  Connected! Waiting for data from usermode
+                  {(mapName === "invalid" &&
+                    `Mapa desconocido${rawMapName ? `: ${rawMapName}` : ""}`) ||
+                    "Connected! Waiting for data from usermode"}
                 </h1>
               </div>
             )}
