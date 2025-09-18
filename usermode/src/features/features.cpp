@@ -18,12 +18,15 @@ void f::run()
 void f::get_map()
 {
 	const auto map_name = i::m_global_vars->m_map_name();
+	m_data["m_map_raw"] = map_name;
+
 	if (map_name.empty() || map_name.find("<empty>") != std::string::npos)
 	{
 		m_data["m_map"] = "invalid";
 
 		LOG_WARNING("failed to get map name! updating m_global_vars");
 		i::m_global_vars = m_memory->read_t<c_global_vars*>(m_memory->find_pattern(CLIENT_DLL, GET_GLOBAL_VARS)->rip().as<c_global_vars*>());
+		return;
 	}
 
 	m_data["m_map"] = map_name;
