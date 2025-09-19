@@ -95,7 +95,7 @@ const buildMapNameCandidates = (mapName) => {
         variants.add(sanitizedNoDigits);
       }
     }
-
+    
     const segments = normalizedValue.split(/[^a-z0-9]+/i).filter(Boolean);
     segments.forEach((segment) => {
       if (segment !== normalizedValue) {
@@ -266,6 +266,7 @@ const App = () => {
             setMapData(undefined);
             document.body.style.backgroundImage = "";
           }
+          
         } else {
           setMapData(undefined);
           document.body.style.backgroundImage = "";
