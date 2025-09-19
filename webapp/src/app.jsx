@@ -143,19 +143,50 @@ const resolveMapName = (mapName) => {
   }
 
   const mapCandidates = buildMapNameCandidates(baseName);
+  if (mapCandidates.length === 0) {
+    return "invalid";
+  }
+
+  const mapCandidateSet = new Set(mapCandidates);
+  const MINIMUM_MATCH_LENGTH = 4;
+  const EXACT_MATCH_BONUS = 100;
+
+  let bestMatch = { name: "invalid", score: 0 };
+
+  const considerMatch = (canonicalMap, candidate, { bonus = 0 } = {}) => {
+    if (!candidate) {
+      return;
+    }
+
+    const normalizedCandidate = candidate.trim();
+    if (!normalizedCandidate || normalizedCandidate.length < MINIMUM_MATCH_LENGTH) {
+      return;
+    }
+
+    const score = normalizedCandidate.length + bonus;
+    if (score > bestMatch.score) {
+      bestMatch = { name: canonicalMap, score };
+    }
+  };
 
   for (const canonicalMap of KNOWN_MAPS) {
-    if (mapCandidates.includes(canonicalMap)) {
-      return canonicalMap;
+    if (mapCandidateSet.has(canonicalMap)) {
+      considerMatch(canonicalMap, canonicalMap, { bonus: EXACT_MATCH_BONUS });
     }
 
     const canonicalCandidates = buildMapNameCandidates(canonicalMap);
-    if (canonicalCandidates.some((candidate) => mapCandidates.includes(candidate))) {
-      return canonicalMap;
+    for (const candidate of canonicalCandidates) {
+      if (!mapCandidateSet.has(candidate)) {
+        continue;
+      }
+
+      considerMatch(canonicalMap, candidate, {
+        bonus: candidate === canonicalMap ? EXACT_MATCH_BONUS : 0,
+      });
     }
   }
 
-  return "invalid";
+  return bestMatch.name;
 };
 
 const DEFAULT_SETTINGS = {
