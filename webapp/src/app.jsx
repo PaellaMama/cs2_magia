@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import "./App.css";
-import PlayerCard from "./components/PlayerCard";
-import Radar from "./components/Radar";
+import "./app.css";
+import PlayerCard from "./components/playercard";
+import Radar from "./components/radar";
 import { getLatency, Latency } from "./components/latency";
 import MaskedIcon from "./components/maskedicon";
 
@@ -15,6 +15,148 @@ const PUBLIC_IP = "your ip goes here".trim();
 const PORT = 22006;
 
 const EFFECTIVE_IP = USE_LOCALHOST ? "localhost" : PUBLIC_IP.match(/[a-zA-Z]/) ? window.location.hostname : PUBLIC_IP;
+
+const KNOWN_MAPS = [
+  "cs_agency",
+  "cs_italy",
+  "cs_office",
+  "de_ancient",
+  "de_anubis",
+  "de_dust2",
+  "de_grail",
+  "de_inferno",
+  "de_jura",
+  "de_mills",
+  "de_mirage",
+  "de_nuke",
+  "de_overpass",
+  "de_thera",
+  "de_train",
+  "de_vertigo",
+];
+
+const KNOWN_MAP_PREFIXES = ["cs", "de", "ar", "gg", "aim", "awp", "fy", "dz"];
+
+const getBaseMapName = (mapName) => {
+  if (!mapName) {
+    return "";
+  }
+
+  const normalized = mapName.toLowerCase();
+  const segments = normalized.split("/");
+  const lastSegment = segments[segments.length - 1] || "";
+  const [baseName] = lastSegment.split(".");
+
+  return baseName;
+};
+
+const sanitizeToken = (value, { removeDigits } = {}) => {
+  if (!value) {
+    return "";
+  }
+
+  const alphanumeric = value.replace(/[^a-z0-9]/g, "");
+  return removeDigits ? alphanumeric.replace(/\d+/g, "") : alphanumeric;
+};
+
+const buildMapNameCandidates = (mapName) => {
+  const baseName = getBaseMapName(mapName);
+  if (!baseName) {
+    return [];
+  }
+
+  const variants = new Set();
+  const processedValues = new Set();
+
+  const addVariants = (value) => {
+    if (!value) {
+      return;
+    }
+
+    const normalizedValue = value.trim();
+    if (!normalizedValue) {
+      return;
+    }
+
+    if (processedValues.has(normalizedValue)) {
+      return;
+    }
+    processedValues.add(normalizedValue);
+
+    variants.add(normalizedValue);
+
+    const sanitized = sanitizeToken(normalizedValue);
+    if (sanitized) {
+      variants.add(sanitized);
+      const sanitizedNoDigits = sanitizeToken(normalizedValue, {
+        removeDigits: true,
+      });
+      if (sanitizedNoDigits) {
+        variants.add(sanitizedNoDigits);
+      }
+    }
+
+    const segments = normalizedValue.split(/[^a-z0-9]+/i).filter(Boolean);
+    segments.forEach((segment) => {
+      if (segment !== normalizedValue) {
+        addVariants(segment);
+      }
+    });
+
+    if (normalizedValue.includes("_")) {
+      const [firstSegment] = normalizedValue.split("_");
+      if (firstSegment && firstSegment.length > 3) {
+        variants.add(firstSegment);
+        const firstSegmentSanitized = sanitizeToken(firstSegment);
+        if (firstSegmentSanitized) {
+          variants.add(firstSegmentSanitized);
+          const firstSegmentNoDigits = sanitizeToken(firstSegment, { removeDigits: true });
+          if (firstSegmentNoDigits) {
+            variants.add(firstSegmentNoDigits);
+          }
+        }
+      }
+    }
+  };
+
+  addVariants(baseName);
+
+  KNOWN_MAP_PREFIXES.forEach((prefix) => {
+    const prefixWithUnderscore = `${prefix}_`;
+    if (baseName.startsWith(prefixWithUnderscore)) {
+      addVariants(baseName.slice(prefixWithUnderscore.length));
+    }
+  });
+
+  return Array.from(variants).filter(Boolean);
+};
+
+const resolveMapName = (mapName) => {
+  const baseName = getBaseMapName(mapName);
+
+  if (!baseName || baseName === "invalid") {
+    return "invalid";
+  }
+
+  if (KNOWN_MAPS.includes(baseName)) {
+    return baseName;
+  }
+
+  const mapCandidates = buildMapNameCandidates(baseName);
+
+  for (const canonicalMap of KNOWN_MAPS) {
+    if (mapCandidates.includes(canonicalMap)) {
+      return canonicalMap;
+    }
+
+    const canonicalCandidates = buildMapNameCandidates(canonicalMap);
+    if (canonicalCandidates.some((candidate) => mapCandidates.includes(candidate))) {
+      return canonicalMap;
+    }
+  }
+
+  return "invalid";
+};
 
 const DEFAULT_SETTINGS = {
   dotSize: 1,
@@ -107,15 +249,17 @@ const App = () => {
         const map = parsedData.m_map;
         const mapRaw = parsedData.m_map_raw;
 
-        setMapName(map);
+        const resolvedMap = resolveMapName(map);
+
+        setMapName(resolvedMap);
         setRawMapName(mapRaw);
 
-        if (map !== "invalid") {
+        if (resolvedMap !== "invalid") {
           setMapData({
-            ...(await (await fetch(`data/${map}/data.json`)).json()),
-            name: map,
+            ...(await (await fetch(`data/${resolvedMap}/data.json`)).json()),
+            name: resolvedMap,
           });
-          document.body.style.backgroundImage = `url(./data/${map}/background.png)`;
+          document.body.style.backgroundImage = `url(./data/${resolvedMap}/background.png)`;
         } else {
           setMapData(undefined);
           document.body.style.backgroundImage = "";
