@@ -6,7 +6,7 @@ const c_base_handle c_entity_instance::get_ref_e_handle()
 	if (!entity)
 		return c_base_handle();
 
-	return c_base_handle(entity->get_entry_idx(), entity->get_serial_number() - (entity->m_flags() & 1));
+        return c_base_handle(entity->get_entry_idx(), entity->get_serial_number());
 }
 
 const std::string c_entity_instance::get_schema_class_name()
