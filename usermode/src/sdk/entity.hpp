@@ -48,12 +48,11 @@ public:
 	SCHEMA_ADD_OFFSET(uintptr_t, m_pClassInfo, 0x08);
 	SCHEMA_ADD_OFFSET(uint32_t, m_Idx, 0x10);
 	SCHEMA_ADD_FIELD(const char*, m_designerName, "CEntityIdentity->m_designerName");
-	SCHEMA_ADD_FIELD(uint32_t, m_flags, "CEntityIdentity->m_flags");
 
-	bool is_valid()
-	{
-		return m_Idx() != INVALID_EHANDLE_IDX;
-	}
+        bool is_valid()
+        {
+                return m_Idx() != INVALID_EHANDLE_IDX;
+        }
 
 	int32_t get_entry_idx()
 	{
